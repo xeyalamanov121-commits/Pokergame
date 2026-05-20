@@ -2,43 +2,35 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
-const path = require('path');
 
 const app = express();
 app.use(cors());
-
-// Frontend fayllarının xidməti
 app.use(express.static(__dirname));
 
 const server = http.createServer(app);
 const io = new Server(server, {
-    cors: {
-        origin: "*", 
-        methods: ["GET", "POST"]
-    }
+    cors: { origin: "*", methods: ["GET", "POST"] }
 });
 
-// Masaların vəziyyətini saxlayan obyekt
+// Masaların vəziyyəti
 const pokerTables = {
     low: [],
     high: []
 };
 
 io.on('connection', (socket) => {
-    console.log(`🟢 Yeni oyunçu qoşuldu: ${socket.id}`);
+    console.log(`🟢 Yeni bağlantı: ${socket.id}`);
 
-    // Oyunçunun masaya qoşulması
     socket.on('joinTable', ({ tableId, playerName }) => {
-        if (!pokerTables[tableId]) {
-            pokerTables[tableId] = [];
-        }
+        // Əgər masa yoxdursa, təhlükəsizlik üçün yarat
+        if (!pokerTables[tableId]) pokerTables[tableId] = [];
 
-        // Oyunçunu masaya əlavə et
+        // Oyunçu artıq masadadırsa, əlavə etmə
+        if (pokerTables[tableId].find(p => p.id === socket.id)) return;
+
+        // Oyunçunu masaya qoş
         socket.join(tableId);
-        pokerTables[tableId].push({ 
-            id: socket.id, 
-            name: playerName 
-        });
+        pokerTables[tableId].push({ id: socket.id, name: playerName });
 
         console.log(`👤 ${playerName} -> [${tableId}] masasına oturdu.`);
 
@@ -46,23 +38,22 @@ io.on('connection', (socket) => {
         io.to(tableId).emit('tableUpdated', pokerTables[tableId]);
     });
 
-    // Oyunçu ayrıldıqda
     socket.on('disconnect', () => {
         console.log(`🔴 Oyunçu ayrıldı: ${socket.id}`);
         
-        for (const tableId in pokerTables) {
+        // Bütün masaları yoxla və oyunçunu siyahıdan təmizlə
+        Object.keys(pokerTables).forEach(tableId => {
             const initialLength = pokerTables[tableId].length;
             pokerTables[tableId] = pokerTables[tableId].filter(p => p.id !== socket.id);
             
-            // Əgər oyunçu bu masada idisə, siyahını yenilə
+            // Əgər siyahı dəyişibsə, masadakılara xəbər ver
             if (pokerTables[tableId].length !== initialLength) {
                 io.to(tableId).emit('tableUpdated', pokerTables[tableId]);
             }
-        }
+        });
     });
 });
 
-// Serverin portu (Render avtomatik təyin edir)
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {
     console.log(`🚀 Poker Serveri ${PORT} portunda aktivdir!`);
