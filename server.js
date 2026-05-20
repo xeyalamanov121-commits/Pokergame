@@ -4,25 +4,31 @@ const http = require('http').createServer(app);
 const io = require('socket.io')(http, { cors: { origin: "*" } });
 const path = require('path');
 
-// BURA ÇOX VACİBDİR: index.html-in olduğu qovluğu dəqiq göstəririk
 app.use(express.static(path.join(__dirname, '/')));
 
-const pokerTables = { low: [], high: [] };
+// Oyun məntiqi (Kartlar, qiymətləndirmə və s.)
+// ... (Faylında olan createDeck, shuffle və evaluateHand funksiyaları bura daxildir)
+
+const tables = {}; // Masaların siyahısı
 
 io.on('connection', (socket) => {
-    console.log("Yeni istifadəçi qoşuldu: " + socket.id);
-    
-    socket.on('joinTable', (data) => {
-        const { tableId, playerName } = data;
-        if (!pokerTables[tableId]) pokerTables[tableId] = [];
+    console.log("Yeni istifadəçi qoşuldu:", socket.id);
+
+    socket.on('joinTable', ({ tableId, playerName }) => {
+        if (!tables[tableId]) {
+            tables[tableId] = { players: [], phase: 'waiting', actionHistory: [] };
+        }
         
+        const table = tables[tableId];
+        table.players.push({ id: socket.id, name: playerName, balance: 1000 });
         socket.join(tableId);
-        pokerTables[tableId].push({ id: socket.id, name: playerName });
         
-        // Mərtəbəyə məlumat göndəririk
-        io.to(tableId).emit('tableUpdated', pokerTables[tableId]);
+        // Bütün oyunçulara masanı göndər
+        io.to(tableId).emit('tableUpdated', table);
     });
+
+    // Oyun hərəkətləri (action) və digər məntiq burada idarə olunur
 });
 
 const PORT = process.env.PORT || 3001;
-http.listen(PORT, () => console.log("Server aktivdir port: " + PORT));
+http.listen(PORT, () => console.log(`Server ${PORT} portunda aktivdir!`));
