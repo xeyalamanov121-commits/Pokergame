@@ -3,38 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Poker</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <title>Poker Arena</title>
+    <style>
+        body { background: #1c1c1c; color: white; text-align: center; font-family: sans-serif; }
+        .enter-btn { padding: 20px 40px; font-size: 20px; border-radius: 10px; cursor: pointer; }
+    </style>
 </head>
 <body>
+
     <div id="lobby">
-        <button onclick="joinRoom('low')" style="padding: 20px; font-size: 20px;">Oyna (Low)</button>
-    </div>
-    <div id="game-table" style="display:none;">
-        <h1>Oyun masası</h1>
+        <h1>🎲 Poker Arena</h1>
+        <button class="enter-btn" onclick="joinRoom('low')">Oyna (Low Stakes)</button>
     </div>
 
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script>
-        // Bağlantı konfiqurasiyası
-        const socket = io("https://bearbee-poker.onrender.com", { 
-            transports: ['websocket'],
-            upgrade: false
-        });
-
+        const socket = io("https://bearbee-poker.onrender.com", { transports: ['websocket'] });
         const tg = window.Telegram.WebApp;
         tg.expand();
 
         function joinRoom(id) {
-            // Adı Telegram-dan alırıq, almasaq "Qonaq" qoyuruq
             const name = tg.initDataUnsafe?.user?.first_name || "Qonaq";
-            
-            // Serverə məlumat göndəririk
             socket.emit('joinTable', { tableId: id, playerName: name });
-            
-            // Vizual dəyişiklik
-            document.getElementById('lobby').style.display = 'none';
-            document.getElementById('game-table').style.display = 'block';
+            alert("Qoşulma sorğusu göndərildi!");
         }
     </script>
 </body>
