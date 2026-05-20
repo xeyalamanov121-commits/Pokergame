@@ -12,7 +12,6 @@
         .lobby-title { font-size: 1.8em; margin-bottom: 30px; font-weight: bold; }
         .room-card { background: #2b2b2b; padding: 20px; margin: 15px 0; border-radius: 15px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #444; }
         .enter-btn { background: #3390ec; color: #ffffff; border: none; padding: 12px 25px; border-radius: 10px; font-weight: bold; cursor: pointer; }
-        
         .table-container { display: flex; justify-content: center; margin-top: 60px; }
         .felt { width: 320px; height: 200px; background: #1a5e20; border: 10px solid #4a2c10; border-radius: 50% / 100%; position: relative; }
         .player { position: absolute; font-size: 0.8em; background: rgba(0,0,0,0.6); padding: 5px 10px; border-radius: 6px; white-space: nowrap; border: 1px solid #555; }
@@ -48,12 +47,21 @@
     </div>
 
     <script>
-        const socket = io("https://bearbee-poker.onrender.com", { transports: ['websocket'] });
+        // 1. Telegram App Başlat
         const tg = window.Telegram.WebApp;
         tg.expand();
 
+        // 2. Socket Bağlantısı
+        const socket = io("https://bearbee-poker.onrender.com", { transports: ['websocket'] });
+
+        socket.on('connect', () => console.log("Connected to server"));
+
         function joinRoom(id) {
-            const name = tg.initDataUnsafe.user?.first_name || "Qonaq";
+            // İsim alma təhlükəsizliyi
+            const user = tg.initDataUnsafe?.user;
+            const name = user ? (user.first_name || "Oyunçu") : "Qonaq";
+            
+            console.log("Qoşulur:", id, name);
             socket.emit('joinTable', { tableId: id, playerName: name });
         }
 
