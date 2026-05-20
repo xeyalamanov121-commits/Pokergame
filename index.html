@@ -2,61 +2,47 @@
 <html lang="az">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bearbee Cyber Empire</title>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="https://sad.adsgram.ai/js/adsgram-api.js"></script>
-
     <style>
-        body { font-family: sans-serif; background: #1a1a1a; color: white; text-align: center; padding: 20px; }
+        body { font-family: sans-serif; background: #121212; color: white; text-align: center; padding: 20px; }
         .container { background: #222; padding: 20px; border-radius: 10px; max-width: 400px; margin: auto; }
-        button { width: 100%; padding: 12px; margin: 8px 0; border-radius: 5px; border: none; cursor: pointer; font-weight: bold; }
+        button { width: 100%; padding: 15px; margin: 8px 0; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
         #balanceDisplay { color: #4caf50; font-size: 1.2em; margin: 15px 0; }
     </style>
 </head>
 <body>
-
     <div class="container">
-        <h1>Bearbee Empire</h1>
-        
+        <h1>Bearbee Cyber</h1>
         <button onclick="playAd('low')" style="background: #ff9800;">📺 500 Data Qazan</button>
         <button onclick="playAd('high')" style="background: #e91e63; color: white;">📺 5000 Data Qazan</button>
-
-        <hr style="margin: 20px 0; border: 0.5px solid #444;">
-
+        
+        <hr style="border: 0.5px solid #444;">
+        
         <h3>Poker Otaqları</h3>
-        <div id="balanceDisplay">Balansınız yoxlanılır...</div>
+        <div id="balanceDisplay">Balans yoxlanılır...</div>
         <button onclick="joinRoom('beginner', 0.50)" style="background: #2196f3; color: white;">0.50$ (Beginner)</button>
         <button onclick="joinRoom('pro', 2.00)" style="background: #9c27b0; color: white;">2.00$ (Pro)</button>
     </div>
 
     <script>
-        // 1. Reklam Məntiqi
         const adsInstance = window.Adsgram.init({ blockId: "3742" });
+        const socket = io(); // Render avtomatik olaraq eyni hosta qoşur
+        
         async function playAd(type) {
             try {
                 const res = await adsInstance.show();
-                if (res.done) {
-                    alert('Reklam izlənildi! Data balansınıza əlavə edildi.');
-                }
-            } catch (e) { alert("Reklam hazırda əlçatan deyil."); }
+                if (res.done) alert('Reklam izlənildi!');
+            } catch (e) { alert("Reklam hazır deyil."); }
         }
-
-        // 2. Poker Məntiqi
-        // Render layihənizin linkini bura daxil edin:
-        const socket = io("https://bearbee-poker.onrender.com"); 
-        
-        const userId = "user_" + Math.floor(Math.random() * 1000); 
-        const playerName = "Oyunçu_50";
 
         socket.on('balanceUpdated', (data) => {
             document.getElementById('balanceDisplay').innerText = `Balansınız: ${data.balance}$`;
         });
 
-        socket.on('error', (msg) => alert(msg));
-
         function joinRoom(tableId, buyIn) {
-            socket.emit('joinTable', { tableId, userId, playerName, buyIn });
+            socket.emit('joinTable', { tableId, userId: 'user_123', playerName: 'Oyunçu_50', buyIn });
         }
     </script>
 </body>
