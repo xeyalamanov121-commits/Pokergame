@@ -1,77 +1,35 @@
-const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
-const cors = require('cors');
-const fs = require('fs');
+<!DOCTYPE html>
+<html lang="az">
+<head>
+    <meta charset="UTF-8">
+    <title>Bearbee Cyber Empire</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://sad.adsgram.ai/js/adsgram-api.js"></script>
+    <style>
+        body { background: #121212; color: white; text-align: center; font-family: sans-serif; }
+        button { padding: 15px; margin: 10px; cursor: pointer; border-radius: 8px; border: none; }
+    </style>
+</head>
+<body>
+    <h1>Bearbee Cyber Empire</h1>
+    
+    <div id="balanceDisplay">Balansınız yoxlanılır...</div>
+    
+    <button onclick="joinRoom('beginner', 0.50)" style="background: #2196f3;">0.50$ (Beginner)</button>
+    <button onclick="joinRoom('pro', 2.00)" style="background: #9c27b0;">2.00$ (Pro)</button>
 
-const app = express();
-app.use(cors());
+    <script>
+        const socket = io(); // Render-də avtomatik işləyəcək
+        const userId = "user_" + Date.now(); 
+        const playerName = "Oyunçu";
 
-// Məlumatların saxlanacağı faylın adı
-const DB_FILE = 'data.json';
+        socket.on('balanceUpdated', (data) => {
+            document.getElementById('balanceDisplay').innerText = `Balansınız: ${data.balance}$`;
+        });
 
-// Fayl mövcud deyilsə, boş bazanı yarat
-if (!fs.existsSync(DB_FILE)) {
-    fs.writeFileSync(DB_FILE, JSON.stringify({ users: {} }));
-}
-
-// Bazanı oxuyan funksiya
-const loadData = () => JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
-
-// Bazaya yazan funksiya
-const saveData = (data) => fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
-
-const server = http.createServer(app);
-const io = new Server(server, {
-    cors: { origin: "*", methods: ["GET", "POST"] }
-});
-
-const pokerTables = {};
-
-io.on('connection', (socket) => {
-    console.log(`🟢 Yeni oyunçu qoşuldu! ID: ${socket.id}`);
-
-    // Masa sisteminə qoşulma və balans yoxlaması
-    socket.on('joinTable', ({ tableId, userId, playerName, buyIn }) => {
-        let data = loadData();
-
-        // İstifadəçi bazada yoxdursa, yeni yarad (Başlanğıc 10$ balans ilə)
-        if (!data.users[userId]) {
-            data.users[userId] = { balance: 10.00, name: playerName };
-            saveData(data);
+        function joinRoom(tableId, buyIn) {
+            socket.emit('joinTable', { tableId, userId, playerName, buyIn });
         }
-
-        // Balansı yoxla
-        if (data.users[userId].balance >= buyIn) {
-            // Balansdan girişi çıx
-            data.users[userId].balance -= buyIn;
-            saveData(data);
-
-            // Masaya qoşul
-            socket.join(tableId);
-            if (!pokerTables[tableId]) pokerTables[tableId] = [];
-            pokerTables[tableId].push({ id: socket.id, name: playerName, userId });
-
-            // Yenilənmiş məlumatları göndər
-            io.to(tableId).emit('tableUpdated', pokerTables[tableId]);
-            socket.emit('balanceUpdated', { balance: data.users[userId].balance });
-
-            console.log(`👤 ${playerName} -> [${tableId}] masasına əyləşdi (Giriş: ${buyIn})`);
-        } else {
-            socket.emit('error', 'Balansınız kifayət deyil!');
-        }
-    });
-
-    socket.on('disconnect', () => {
-        console.log(`🔴 Oyunçu ayrıldı. ID: ${socket.id}`);
-        for (const tableId in pokerTables) {
-            pokerTables[tableId] = pokerTables[tableId].filter(player => player.id !== socket.id);
-            io.to(tableId).emit('tableUpdated', pokerTables[tableId]);
-        }
-    });
-});
-
-const PORT = process.env.PORT || 3001;
-server.listen(PORT, () => {
-    console.log(`🚀 Canlı Poker Serveri ${PORT} portunda aktivdir!`);
-});
+    </script>
+</body>
+</html>
