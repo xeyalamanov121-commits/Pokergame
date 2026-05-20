@@ -5,16 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Real Poker Arena</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <style>
-        body { background-color: var(--tg-theme-bg-color, #1c1c1c); color: var(--tg-theme-text-color, #ffffff); font-family: sans-serif; margin: 0; padding: 20px; }
+        body { background-color: #1c1c1c; color: #ffffff; font-family: sans-serif; margin: 0; padding: 20px; text-align: center; }
         .hidden { display: none; }
-        
-        /* Lobby stilləri */
-        .lobby-title { font-size: 1.5em; margin-bottom: 20px; text-align: center; }
-        .room-card { background: var(--tg-theme-secondary-bg-color, #2b2b2b); padding: 15px; margin: 10px 0; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; }
-        .enter-btn { background: var(--tg-theme-button-color, #3390ec); color: var(--tg-theme-button-text-color, #ffffff); border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; }
-
-        /* Masa stilləri */
+        .lobby-title { font-size: 1.5em; margin-bottom: 20px; }
+        .room-card { background: #2b2b2b; padding: 15px; margin: 10px 0; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; }
+        .enter-btn { background: #3390ec; color: #ffffff; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; }
         .table-container { display: flex; justify-content: center; margin-top: 50px; }
         .felt { width: 300px; height: 180px; background: #1a5e20; border: 8px solid #4a2c10; border-radius: 50% / 100%; position: relative; }
         .player { position: absolute; font-size: 0.7em; background: rgba(0,0,0,0.5); padding: 3px 8px; border-radius: 5px; }
@@ -22,48 +19,43 @@
         .bottom { bottom: -30px; left: 50%; transform: translateX(-50%); }
         .left { left: -40px; top: 40%; }
         .right { right: -40px; top: 40%; }
-        .cards { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: flex; gap: 5px; }
-        .card { background: white; color: black; padding: 5px; border-radius: 3px; font-size: 0.8em; font-weight: bold; }
     </style>
 </head>
 <body>
 
     <div id="lobby">
         <div class="lobby-title">🎲 Poker Arena</div>
-        <div class="room-card">
-            <span>Low Stakes (1000)</span>
-            <button class="enter-btn" onclick="joinRoom('low')">Oyna</button>
-        </div>
-        <div class="room-card">
-            <span>High Stakes (5000)</span>
-            <button class="enter-btn" onclick="joinRoom('high')">Oyna</button>
-        </div>
+        <div class="room-card"><span>Low Stakes</span><button class="enter-btn" onclick="joinRoom('low')">Oyna</button></div>
+        <div class="room-card"><span>High Stakes</span><button class="enter-btn" onclick="joinRoom('high')">Oyna</button></div>
     </div>
 
     <div id="game-table" class="hidden">
         <div class="table-container">
             <div class="felt">
-                <div class="player top">Opponent</div>
-                <div class="player left">User 2</div>
-                <div class="player right">User 3</div>
+                <div class="player top">...</div>
+                <div class="player left">...</div>
+                <div class="player right">...</div>
                 <div class="player bottom">Siz</div>
-                <div class="cards">
-                    <div class="card">A♥</div>
-                    <div class="card">K♥</div>
-                </div>
             </div>
         </div>
     </div>
 
     <script>
+        const socket = io("https://poker-arena-live.onrender.com"); // Buraya öz linkinizi yazın
         const tg = window.Telegram.WebApp;
         tg.expand();
 
         function joinRoom(id) {
+            const name = tg.initDataUnsafe.user?.first_name || "Qonaq";
+            socket.emit('joinTable', { tableId: id, playerName: name, buyIn: 100 });
+        }
+
+        socket.on('tableUpdated', (players) => {
             document.getElementById('lobby').classList.add('hidden');
             document.getElementById('game-table').classList.remove('hidden');
-            console.log(id + " otağına keçildi.");
-        }
+            const positions = ['.bottom', '.right', '.top', '.left'];
+            players.forEach((p, i) => { if(positions[i]) document.querySelector(positions[i]).innerText = p.name; });
+        });
     </script>
 </body>
 </html>
