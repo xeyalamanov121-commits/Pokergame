@@ -4,33 +4,27 @@
     <meta charset="UTF-8">
     <title>Poker Arena</title>
     <style>
-        body { background: #1c1c1c; color: white; text-align: center; font-family: sans-serif; }
-        #game-table { display: none; }
-        button { padding: 15px 30px; font-size: 18px; cursor: pointer; }
+        /* Sənin faylında olan bütün CSS kodları bura gəlir */
+        body { background: #0a0a0a; color: #e8e0cc; font-family: 'DM Mono', monospace; }
+        .felt { background: #1a4a2e; padding: 20px; border-radius: 20px; }
     </style>
 </head>
 <body>
-    <div id="lobby">
-        <h1>🎲 Poker Arena</h1>
-        <button onclick="joinRoom('low')">Oyna (Low Stakes)</button>
-    </div>
-    <div id="game-table">
-        <h2>Oyun masası</h2>
-        <div id="players"></div>
+    <div id="app">
+        <button onclick="joinGame('low')">Oyna</button>
     </div>
 
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <script>
-        const socket = io(); // Artıq link yazmağa ehtiyac yoxdur, server avtomatik tapacaq
+        const socket = io();
         
-        function joinRoom(id) {
-            socket.emit('joinTable', { tableId: id, playerName: "Oyunçu" });
+        function joinGame(tableId) {
+            socket.emit('joinTable', { tableId, playerName: "Oyunçu" });
         }
 
-        socket.on('tableUpdated', (players) => {
-            document.getElementById('lobby').style.display = 'none';
-            document.getElementById('game-table').style.display = 'block';
-            document.getElementById('players').innerText = "Oyunçular: " + players.length;
+        socket.on('tableUpdated', (table) => {
+            console.log("Masa yeniləndi:", table);
+            // Burada interfeysi yeniləyən kodlar yazılmalıdır
         });
     </script>
 </body>
