@@ -11,7 +11,7 @@
         .hidden { display: none; }
         .lobby-title { font-size: 1.5em; margin-bottom: 20px; }
         .room-card { background: #2b2b2b; padding: 15px; margin: 10px 0; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; }
-        .enter-btn { background: #3390ec; color: #ffffff; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; }
+        .enter-btn { background: #3390ec; color: #ffffff; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; }
         .table-container { display: flex; justify-content: center; margin-top: 50px; }
         .felt { width: 300px; height: 180px; background: #1a5e20; border: 8px solid #4a2c10; border-radius: 50% / 100%; position: relative; }
         .player { position: absolute; font-size: 0.7em; background: rgba(0,0,0,0.5); padding: 3px 8px; border-radius: 5px; white-space: nowrap; }
@@ -41,38 +41,36 @@
     </div>
 
     <script>
-        // Sığortalanmış Socket bağlantısı
-        const socket = io("https://bearbee-poker.onrender.com", {
-            transports: ['websocket'],
-            upgrade: false
-        });
-
+        // Bağlantı konfiqurasiyası
+        const socket = io("https://bearbee-poker.onrender.com", { transports: ['websocket'] });
         const tg = window.Telegram.WebApp;
         tg.expand();
 
         function joinRoom(id) {
-            const name = tg.initDataUnsafe.user?.first_name || "Qonaq";
-            console.log("Qoşulma cəhdi:", id, name);
+            // İstifadəçi adını alarkən təhlükəsiz yoxlama
+            let name = "Qonaq";
+            try {
+                if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+                    name = tg.initDataUnsafe.user.first_name || "Oyunçu";
+                }
+            } catch(e) { console.log("Telegram məlumatı alınmadı"); }
+
+            console.log("Qoşulur:", id, name);
             socket.emit('joinTable', { tableId: id, playerName: name });
         }
+
+        socket.on('connect', () => console.log("Serverə qoşuldu!"));
 
         socket.on('tableUpdated', (players) => {
             document.getElementById('lobby').classList.add('hidden');
             document.getElementById('game-table').classList.remove('hidden');
             
             const positions = ['.bottom', '.right', '.top', '.left'];
-            // Əvvəl bütün yerləri təmizləyirik
             positions.forEach(pos => document.querySelector(pos).innerText = "Boş");
             
-            // Oyunçuları yerləşdiririk
             players.forEach((p, i) => { 
                 if(positions[i]) document.querySelector(positions[i]).innerText = p.name; 
             });
-        });
-
-        // Bağlantı xətalarını izləmək üçün
-        socket.on('connect_error', (err) => {
-            console.error("Socket xətası:", err.message);
         });
     </script>
 </body>
