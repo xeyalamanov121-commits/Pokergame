@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Bearbee Canlı Poker</title>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+        body {
+            background-color: #1a1a1a;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: white;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 100vh;
+        }
+        /* Üst Panel */
+        .header {
+            background: rgba(0,0,0,0.5);
+            padding: 10px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 14px;
+            border-bottom: 1px solid #333;
+        }
+        /* Poker Masası Sahəsi */
+        .game-area {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            padding: 20px;
+        }
+        .poker-table {
+            width: 95%;
+            height: 70%;
+            background: radial-gradient(circle, #1b733a 0%, #0d4722 100%);
+            border: 12px solid #5c3a21;
+            border-radius: 120px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.7), inset 0 5px 15px rgba(0,0,0,0.5);
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        /* Masanın Ortası (Kartlar və Bank) */
+        .table-center {
+            text-align: center;
+        }
+        .pot-size {
+            background: rgba(0,0,0,0.6);
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            color: #ffd700;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        /* Oyunçu Stulları (Dinamik yerləşəcək, hələlik sadə siyahı) */
+        .players-list {
+            position: absolute;
+            bottom: -40px;
+            background: rgba(0,0,0,0.8);
+            padding: 5px 15px;
+            border-radius: 10px;
+            border: 1px solid #ffd700;
+            font-size: 12px;
+            max-width: 90%;
+            white-space: nowrap;
+            overflow-x: auto;
+        }
+        /* Alt İdarəetmə Düymələri */
+        .controls {
+            background: #222;
+            padding: 15px;
+            display: flex;
+            justify-content: space-around;
+            gap: 10px;
+            border-top: 1px solid #333;
+        }
+        .btn {
+            flex: 1;
+            padding: 12px 0;
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            transition: transform 0.1s;
+        }
+        .btn:active { transform: scale(0.95); }
+        .btn-fold { background: #d9534f; }
+        .btn-call { background: #f0ad4e; }
+        .btn-raise { background: #5cb85c; }
+    </style>
+</</head>
+<body>
+
+    <div class="header" id="status-bar">Serverə bağlanılır...</div>
+
+    <div class="game-area">
+        <div class="poker-table">
+            <div class="table-center">
+                <div class="pot-size">BANK: $0</div>
+                <div style="font-size: 12px; color: #aaa;">Kartlar Gözlənilir</div>
+            </div>
+            <div class="players-list" id="players-box">Masa boşdur</div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button class="btn btn-fold" onclick="makeAction('fold')">FOLD</button>
+        <button class="btn btn-call" onclick="makeAction('call')">CALL</button>
+        <button class="btn btn-raise" onclick="makeAction('raise')">RAISE</button>
+    </div>
+
+    <script>
+        // 1. Telegram WebApp təhlükəsizliyini aktiv edirik
+        if (window.Telegram && window.Telegram.WebApp) {
+            window.Telegram.WebApp.ready();
+            window.Telegram.WebApp.expand(); // Ekranı tam ölçüyə açır
+        }
+
+        // 2. Sizin canlı Render serverinizə bağlanırıq
+        const socket = io("https://pokergame-oxv1.onrender.com");
+
+        // Telegram-dan daxil olan real istifadəçi adını götürürük
+        const username = window.Telegram?.WebApp?.initDataUnsafe?.user?.first_name || "Oyunçu_" + Math.floor(Math.random() * 1000);
+
+        // Serverə uğurla qoşulduqda
+        socket.on('connect', () => {
+            document.getElementById('status-bar').innerText = `Xoş gəldiniz, ${username}! (Canlı Bağlantı)`;
+            
+            // Avtomatik olaraq "Masa_1" adlı otağa daxil oluruq
+            socket.emit('joinTable', { tableId: "Masa_1", playerName: username });
+        });
+
+        // Serverdən masanın yenilənmiş oyunçu siyahısı gəldikdə ekrana yazdırırıq
+        socket.on('tableUpdated', (players) => {
+            const playersBox = document.getElementById('players-box');
+            if(players.length > 0) {
+                const names = players.map(p => p.name).join(' | ');
+                playersBox.innerText = `Masadakı Oyunçular: ${names}`;
+            } else {
+                playersBox.innerText = "Masa boşdur";
+            }
+        });
+
+        // Düymələrə basıldıqda işləyəcək təməl funksiya (Hələlik sadə test)
+        function makeAction(actionType) {
+            alert(`${username} ${actionType.toUpperCase()} etdi!`);
+            // Gələcəkdə bura serverə gediş məlumatı ötürəcək: socket.emit('playerAction', ...)
+        }
+    </script>
+</body>
+</html>
+
