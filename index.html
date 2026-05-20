@@ -14,7 +14,7 @@
         .enter-btn { background: #3390ec; color: #ffffff; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; }
         .table-container { display: flex; justify-content: center; margin-top: 50px; }
         .felt { width: 300px; height: 180px; background: #1a5e20; border: 8px solid #4a2c10; border-radius: 50% / 100%; position: relative; }
-        .player { position: absolute; font-size: 0.7em; background: rgba(0,0,0,0.5); padding: 3px 8px; border-radius: 5px; }
+        .player { position: absolute; font-size: 0.7em; background: rgba(0,0,0,0.5); padding: 3px 8px; border-radius: 5px; white-space: nowrap; }
         .top { top: -30px; left: 50%; transform: translateX(-50%); }
         .bottom { bottom: -30px; left: 50%; transform: translateX(-50%); }
         .left { left: -40px; top: 40%; }
@@ -32,29 +32,47 @@
     <div id="game-table" class="hidden">
         <div class="table-container">
             <div class="felt">
-                <div class="player top">...</div>
-                <div class="player left">...</div>
-                <div class="player right">...</div>
+                <div class="player top">Boş</div>
+                <div class="player left">Boş</div>
+                <div class="player right">Boş</div>
                 <div class="player bottom">Siz</div>
             </div>
         </div>
     </div>
 
     <script>
-        const socket = io("https://poker-arena-live.onrender.com"); // Buraya öz linkinizi yazın
+        // Sığortalanmış Socket bağlantısı
+        const socket = io("https://bearbee-poker.onrender.com", {
+            transports: ['websocket'],
+            upgrade: false
+        });
+
         const tg = window.Telegram.WebApp;
         tg.expand();
 
         function joinRoom(id) {
             const name = tg.initDataUnsafe.user?.first_name || "Qonaq";
-            socket.emit('joinTable', { tableId: id, playerName: name, buyIn: 100 });
+            console.log("Qoşulma cəhdi:", id, name);
+            socket.emit('joinTable', { tableId: id, playerName: name });
         }
 
         socket.on('tableUpdated', (players) => {
             document.getElementById('lobby').classList.add('hidden');
             document.getElementById('game-table').classList.remove('hidden');
+            
             const positions = ['.bottom', '.right', '.top', '.left'];
-            players.forEach((p, i) => { if(positions[i]) document.querySelector(positions[i]).innerText = p.name; });
+            // Əvvəl bütün yerləri təmizləyirik
+            positions.forEach(pos => document.querySelector(pos).innerText = "Boş");
+            
+            // Oyunçuları yerləşdiririk
+            players.forEach((p, i) => { 
+                if(positions[i]) document.querySelector(positions[i]).innerText = p.name; 
+            });
+        });
+
+        // Bağlantı xətalarını izləmək üçün
+        socket.on('connect_error', (err) => {
+            console.error("Socket xətası:", err.message);
         });
     </script>
 </body>
