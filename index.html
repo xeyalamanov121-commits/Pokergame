@@ -5,10 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Poker Arena</title>
     <style>
-        body { background: #1c1c1c; color: white; text-align: center; font-family: sans-serif; margin: 0; }
-        .enter-btn { padding: 20px 40px; font-size: 20px; border-radius: 10px; cursor: pointer; background: #3390ec; color: white; border: none; }
-        #game-table { display: none; margin-top: 50px; }
-        .felt { width: 300px; height: 180px; background: #1a5e20; border: 8px solid #4a2c10; border-radius: 50% / 100%; margin: 0 auto; display: flex; align-items: center; justify-content: center; }
+        body { background: #1c1c1c; color: white; text-align: center; font-family: sans-serif; }
+        #game-table { display: none; }
+        .enter-btn { padding: 15px 30px; background: #3390ec; color: white; border: none; border-radius: 10px; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -19,26 +18,24 @@
     </div>
 
     <div id="game-table">
-        <h1>Oyun masası</h1>
-        <div class="felt">Siz masadasınız!</div>
+        <h2>Oyun masası</h2>
+        <div id="players-list">Gözləyirsiniz...</div>
     </div>
 
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script>
         const socket = io("https://bearbee-poker.onrender.com", { transports: ['websocket'] });
-        const tg = window.Telegram.WebApp;
-        tg.expand();
-
+        
         function joinRoom(id) {
-            const name = tg.initDataUnsafe?.user?.first_name || "Qonaq";
+            const name = window.Telegram.WebApp.initDataUnsafe?.user?.first_name || "Qonaq";
             socket.emit('joinTable', { tableId: id, playerName: name });
         }
 
-        // SERVERDƏN CAVAB GƏLƏNDƏ İŞƏ DÜŞÜR
         socket.on('tableUpdated', (players) => {
             document.getElementById('lobby').style.display = 'none';
             document.getElementById('game-table').style.display = 'block';
+            document.getElementById('players-list').innerText = "Masadakılar: " + players.map(p => p.name).join(', ');
         });
     </script>
 </body>
