@@ -1,40 +1,56 @@
-<!DOCTYPE html>
-<html lang="az">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bearbee Cyber Empire</title>
-    <script src="https://sad.adsgram.ai/js/adsgram-api.js"></script>
-    <script>
-        const adsInstance = window.Adsgram.init({ blockId: "3742" });
-        
-        async function playAd(type) {
-            try {
-                const res = await adsInstance.show();
-                if (res.done) {
-                    let reward = (type === "high") ? 5000 : 500;
-                    // Balansı yenilə və sinxronizasiya et
-                    window.userStats.honey += reward;
-                    await syncToBackend();
-                    alert('🎁 ' + reward + ' Data balansınıza əlavə edildi!');
-                }
-            } catch (e) { alert("Reklam hazırda əlçatan deyil."); }
-        }
+const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
+const cors = require('cors');
+const fs = require('fs');
+const path = require('path');
 
-        async function syncToBackend() {
-            try {
-                await fetch("https://bearbee-server.vercel.app/api/user/sync", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(window.userStats)
-                });
-            } catch (e) { console.error("Sync xətası:", e); }
-        }
-    </script>
-</head>
-<body>
-    <button onclick="playAd('low')">📺 500 Data Qazan</button>
-    <button onclick="playAd('high')">📺 5000 Data Qazan</button>
-</body>
-</html>
+const app = express();
+app.use(cors());
 
+// Statik faylları (index.html) göstərmək üçün
+app.use(express.static(__dirname));
+
+const DB_FILE = 'data.json';
+if (!fs.existsSync(DB_FILE)) fs.writeFileSync(DB_FILE, JSON.stringify({ users: {} }));
+
+const loadData = () => JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
+const saveData = (data) => fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
+
+const server = http.createServer(app);
+const io = new Server(server, { cors: { origin: "*", methods: ["GET", "POST"] } });
+
+const pokerTables = {};
+
+io.on('connection', (socket) => {
+    console.log(`🟢 Oyunçu qoşuldu: ${socket.id}`);
+
+    socket.on('joinTable', ({ tableId, userId, playerName, buyIn }) => {
+        let data = loadData();
+        if (!data.users[userId]) data.users[userId] = { balance: 10.00, name: playerName };
+
+        if (data.users[userId].balance >= buyIn) {
+            data.users[userId].balance -= buyIn;
+            saveData(data);
+            
+            socket.join(tableId);
+            if (!pokerTables[tableId]) pokerTables[tableId] = [];
+            pokerTables[tableId].push({ id: socket.id, name: playerName, userId });
+            
+            io.to(tableId).emit('tableUpdated', pokerTables[tableId]);
+            socket.emit('balanceUpdated', { balance: data.users[userId].balance });
+        } else {
+            socket.emit('error', 'Balansınız kifayət deyil!');
+        }
+    });
+
+    socket.on('disconnect', () => {
+        for (const tableId in pokerTables) {
+            pokerTables[tableId] = pokerTables[tableId].filter(p => p.id !== socket.id);
+            io.to(tableId).emit('tableUpdated', pokerTables[tableId]);
+        }
+    });
+});
+
+const PORT = process.env.PORT || 3001;
+server.listen(PORT, () => console.log(`🚀 Poker Serveri ${PORT} portunda aktivdir!`));
